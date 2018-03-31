@@ -18,7 +18,7 @@ function filterString($field){
     }
 }
 $name = $lastName = "";
-$nameErr = $lastNameErr = "";
+$nameErr = $lastNameErr = $error = "";
 
 if($_SERVER["REQUEST_METHOD"] == "POST"){
  
@@ -47,18 +47,34 @@ if($_SERVER["REQUEST_METHOD"] == "POST"){
     
     
     if(empty($nameErr) && empty($lastNameErr)){
-   try {    
-        $sql = "INSERT INTO persons (first_name, last_name) VALUES (:name, :lastName)";
-         
-        $stmt = $pdo->prepare($sql);
-    
-    $stmt->bindParam(':name', $_REQUEST['name']);
-    $stmt->bindParam(':lastName', $_REQUEST['lastName']);
-    
-    $stmt->execute();
-} catch(PDOException $e){
-    die("ERROR: Could not able to execute $sql. " . $e->getMessage());
-}
+        try {
+            $sql = "SELECT first_name, last_name FROM persons WHERE first_name =:name AND last_name =:lastName ";
+            if($stmt = $pdo->prepare($sql)){
+                $stmt->bindParam(':name', $param_name, PDO::PARAM_STR);
+                $stmt->bindParam(':lastName', $param_lastName, PDO::PARAM_STR);
+                $param_name = trim($_POST["name"]);
+                $param_lastName = trim($_POST["lastName"]);
+                if($stmt->execute()){
+                    if($stmt->rowCount() > 0){
+                      $error= 'Taki sprzedawca znajduje się juz w bazie';  
+                    }
+                }
+            }
+        } catch(PDOException $e){
+        die("ERROR: Could not able to execute $sql. " . $e->getMessage());
+            } 
+
+        if(empty($error)) {
+            try {    
+                $sql = "INSERT INTO persons (first_name, last_name) VALUES (:name, :lastName)";
+                $stmt = $pdo->prepare($sql);
+                $stmt->bindParam(':name', $_REQUEST['name']);
+                $stmt->bindParam(':lastName', $_REQUEST['lastName']);
+                $stmt->execute();
+            } catch(PDOException $e){   
+            die("ERROR: Could not able to execute $sql. " . $e->getMessage());
+            } 
+        }
     }
 }
 
@@ -140,6 +156,9 @@ unset($pdo);
                     <span class="error"><?php echo $lastNameErr; ?></span>
                 </p>
                 <input type="submit" value="Send" class="btn btn-primary">
+                <p class="error">
+                    <?php echo $error; ?>
+                </p>
             </div>
         </form>
     </body>
